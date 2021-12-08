@@ -1,0 +1,32 @@
+{{define "title"}}Go Web App{{end}}
+{{define "head"}}
+{{CSS "static/css/webrtc.css"}}
+{{end}}
+{{define "content"}}
+<div class="container">
+	<div class="page-header">
+		<h1>Hello, {{.first_name}}</h1>
+        <p>Your id is: {{.user_id}}</p>
+	</div>
+    <div class="video-container">
+        <div class="video">
+            <video id="localVideo" playsinline="" autoplay="" muted=""></video>
+        </div>
+        <div class="video">
+            <video id="remoteVideo" playsinline="" autoplay=""></video>
+            <div class="calling-placeholder">
+                <p>Calling</p>
+            <button id="abort-call">cancel</button>
+            </div>
+            <div class="incoming-container"></div>
+            <button class="cancel-call">cancel</button>
+        </div>
+    </div>
+	<p>Send invite to:</p>
+    <input type="text" id="callee"/>
+    <button id="call" value="call" disabled="disabled">call</button>
+	{{template "footer" .}}
+</div>
+{{JS "static/js/webrtc.js"}}
+{{end}}
+{{define "foot"}}{{end}}

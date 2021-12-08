@@ -110,6 +110,14 @@ func routes() *httprouter.Router {
 		New(acl.DisallowAnon).
 		ThenFunc(pprofhandler.Handler)))
 
+	// WebRTC
+	r.GET("/webrtc", hr.Handler(alice.New(acl.DisallowAnon).ThenFunc(controller.WebrtcGET)))
+	r.GET("/webrtc/listennig", hr.Handler(alice.New(acl.DisallowAnon).ThenFunc(controller.WebrtcListenningGET)))
+	r.POST("/webrtc/offer", hr.Handler(alice.New(acl.DisallowAnon).ThenFunc(controller.WebrtcOfferPOST)))
+	r.POST("/webrtc/answer", hr.Handler(alice.New(acl.DisallowAnon).ThenFunc(controller.WebrtcAnswerPOST)))
+	r.GET("/webrtc/icecandidates", hr.Handler(alice.New(acl.DisallowAnon).ThenFunc(controller.IceCandidatesGET)))
+	r.POST("/webrtc/icecandidates", hr.Handler(alice.New(acl.DisallowAnon).ThenFunc(controller.IceCandidatesPOST)))
+
 	return r
 }
 
@@ -122,7 +130,7 @@ func middleware(h http.Handler) http.Handler {
 	cs := csrfbanana.New(h, session.Store, session.Name)
 	cs.FailureHandler(http.HandlerFunc(controller.InvalidToken))
 	cs.ClearAfterUsage(true)
-	cs.ExcludeRegexPaths([]string{"/static(.*)"})
+	cs.ExcludeRegexPaths([]string{"/static(.*)", "/webrtc"})
 	csrfbanana.TokenLength = 32
 	csrfbanana.TokenName = "token"
 	csrfbanana.SingleToken = false
