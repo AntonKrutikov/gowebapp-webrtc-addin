@@ -51,6 +51,8 @@ func main() {
 		plugin.PrettyTime(),
 		recaptcha.Plugin())
 
+	//go turn.Run()
+
 	// Start the listener
 	server.Run(route.LoadHTTP(), route.LoadHTTPS(), config.Server)
 }

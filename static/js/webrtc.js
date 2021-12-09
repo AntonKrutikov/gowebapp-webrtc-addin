@@ -7,16 +7,28 @@
     let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
     let pc = newPeerConnection()
 
+   
     function newPeerConnection() {
         let pc = new RTCPeerConnection({
-            iceServers: [{
-                urls:  ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19305" ]
-            },
-            {
-                urls: 'turn:numb.viagenie.ca',
-                credential: 'muazkh',
-                username: 'webrtc@live.com'
-            }]
+            iceServers: [
+                // {
+                //      "url": "turn:global.turn.twilio.com:3478?transport=udp", 
+                //      "username": "1253a87ead090b1489b8b1370697c00b7def1268bb41325f1526d7e6b0f7486b", 
+                //      "urls": "turn:global.turn.twilio.com:3478?transport=udp", 
+                //      "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
+                //     }, 
+                    { 
+                        "url": "turn:global.turn.twilio.com:3478?transport=tcp", 
+                        "username": "1253a87ead090b1489b8b1370697c00b7def1268bb41325f1526d7e6b0f7486b",
+                        "urls": "turn:global.turn.twilio.com:3478?transport=tcp", 
+                        "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
+                    }, { 
+                        "url": "turn:global.turn.twilio.com:443?transport=tcp", 
+                        "username": "1253a87ead090b1489b8b1370697c00b7def1268bb41325f1526d7e6b0f7486b", 
+                        "urls": "turn:global.turn.twilio.com:443?transport=tcp", 
+                        "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
+                    }],
+            // iceTransportPolicy: "relay"
         })
 
         stream.getTracks().forEach(track => pc.addTrack(track, stream))
@@ -32,9 +44,9 @@
 
         let candidates = []
 
-        pc.onicecandidate = async (e) => {
-            console.log(e)
-            if (e.candidate !== null){
+        pc.onicecandidate = (e) => {
+            if (e.candidate !== null) {
+                console.log(e.candidate.toJSON())
                 fetch("/webrtc/icecandidates", {
                     method: "POST",
                     headers: {
@@ -61,13 +73,14 @@
             // }
         }
 
-        pc.oniceconnectionstatechange = () => {
-            if (pc.iceConnectionState == 'disconnected') {
-                remoteVideo.srcObject = null
-                cancelCallButton.style.display = 'none'
-                pc.close()
-                pc = newPeerConnection()
-            }
+        pc.oniceconnectionstatechange = (e) => {
+            console.log(e)
+            // if (pc.iceConnectionState == 'disconnected') {
+            //     remoteVideo.srcObject = null
+            //     cancelCallButton.style.display = 'none'
+            //     pc.close()
+            //     pc = newPeerConnection()
+            // }
         }
 
         return pc
@@ -187,6 +200,7 @@
         finally {
             callingPlaceholder.style.display = 'none'
             callButton.disabled = false
+            setInterval(() => console.log(pc), 10000)
         }
     }
 
@@ -248,6 +262,6 @@
                 pc.addIceCandidate(c)
             })
         }
-        setTimeout(() => {waitIceCanditates(caller)}, 3000)
+        //setTimeout(() => { waitIceCanditates(caller) }, 3000)
     }
 })()
