@@ -7,7 +7,7 @@
     let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
     let pc = newPeerConnection()
 
-   
+
     function newPeerConnection() {
         let pc = new RTCPeerConnection({
             iceServers: [
@@ -17,17 +17,30 @@
                 //      "urls": "turn:global.turn.twilio.com:3478?transport=udp", 
                 //      "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
                 //     }, 
-                    { 
-                        "url": "turn:global.turn.twilio.com:3478?transport=tcp", 
-                        "username": "1253a87ead090b1489b8b1370697c00b7def1268bb41325f1526d7e6b0f7486b",
-                        "urls": "turn:global.turn.twilio.com:3478?transport=tcp", 
-                        "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
-                    }, { 
-                        "url": "turn:global.turn.twilio.com:443?transport=tcp", 
-                        "username": "1253a87ead090b1489b8b1370697c00b7def1268bb41325f1526d7e6b0f7486b", 
-                        "urls": "turn:global.turn.twilio.com:443?transport=tcp", 
-                        "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
-                    }],
+                // { 
+                //     "url": "turn:global.turn.twilio.com:3478?transport=tcp", 
+                //     "username": "1253a87ead090b1489b8b1370697c00b7def1268bb41325f1526d7e6b0f7486b",
+                //     "urls": "turn:global.turn.twilio.com:3478?transport=tcp", 
+                //     "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
+                // }, { 
+                //     "url": "turn:global.turn.twilio.com:443?transport=tcp", 
+                //     "username": "1253a87ead090b1489b8b1370697c00b7def1268bb41325f1526d7e6b0f7486b", 
+                //     "urls": "turn:global.turn.twilio.com:443?transport=tcp", 
+                //     "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
+                // },
+                // {
+                //     "url": "stun:5.255.100.110:3478",
+                //     "username": "admin",
+                //     "urls": "stun:5.255.100.110:3478",
+                //     "credential": "admin"
+                // },
+                {
+                    "url": "turn:5.255.100.110:3478",
+                    "username": "admin",
+                    "urls": "turn:5.255.100.110:3478",
+                    "credential": "admin"
+                },
+            ],
             iceTransportPolicy: "relay"
         })
 
@@ -258,11 +271,19 @@
         })
         let response = await result.json()
         console.log(response)
-        if (response !== null) {
-            response.forEach(c => {
-                pc.addIceCandidate(c)
-            })
+        if (pc.connectionState != 'connected') {
+            if (response !== null && pc.connectionState != 'connected') {
+                response.forEach(c => {
+                    pc.addIceCandidate(c)
+                })
+
+            }
+            setTimeout(() => { waitIceCanditates(caller) }, 3000)
         }
-        setTimeout(() => { waitIceCanditates(caller) }, 3000)
+        //Do we need upgrade candidates....?
+        // else {
+        //     setTimeout(() => { waitIceCanditates(caller) }, 10000)
+        // }
+
     }
 })()
