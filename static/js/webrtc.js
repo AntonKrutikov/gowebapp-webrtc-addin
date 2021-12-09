@@ -28,7 +28,7 @@
                         "urls": "turn:global.turn.twilio.com:443?transport=tcp", 
                         "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
                     }],
-            // iceTransportPolicy: "relay"
+            iceTransportPolicy: "relay"
         })
 
         stream.getTracks().forEach(track => pc.addTrack(track, stream))
@@ -164,6 +164,7 @@
         callingPlaceholder.style.display = 'flex'
         let callee = calleeInput.value
         await createOffer(callee)
+        waitIceCanditates(callee)
         calleeInput.value = ''
     })
 
@@ -262,6 +263,6 @@
                 pc.addIceCandidate(c)
             })
         }
-        //setTimeout(() => { waitIceCanditates(caller) }, 3000)
+        setTimeout(() => { waitIceCanditates(caller) }, 3000)
     }
 })()
