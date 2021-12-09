@@ -242,8 +242,7 @@
             response.forEach(c => {
                 pc.addIceCandidate(c)
             })
-        } else {
-            setTimeout(() => {waitIceCanditates(caller)}, 1000)
         }
+        setTimeout(() => {waitIceCanditates(caller)}, 3000)
     }
 })()
