@@ -227,8 +227,12 @@
         })
         let response = await result.json()
         console.log(response)
-        response.forEach(c => {
-            pc.addIceCandidate(c)
-        })
+        if (response == null) {
+            setTimeout(waitIceCanditates(caller), 500)
+        } else {
+            response.forEach(c => {
+                pc.addIceCandidate(c)
+            })
+        }
     }
 })()
