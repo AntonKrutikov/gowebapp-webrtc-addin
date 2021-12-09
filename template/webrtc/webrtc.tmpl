@@ -24,7 +24,8 @@
     </div>
 	<p>Send invite to:</p>
     <input type="text" id="callee"/>
-    <button id="call" value="call" disabled="disabled">call</button>
+    <button id="call" class="call" value="call" disabled="disabled">videocall</button>
+    <button id="screenshare" class="call" value="call" disabled="disabled">screenshare</button>
 	{{template "footer" .}}
 </div>
 {{JS "static/js/webrtc.js"}}

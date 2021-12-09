@@ -4,7 +4,16 @@
         offerToReceiveVideo: 1
     };
 
-    let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+    // let stream 
+    // try {
+    //     stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+    // } catch (err) {
+    //     try {
+    //     stream = captureStream = await navigator.mediaDevices.getDisplayMedia({})
+    //     } catch (e) {
+    //     console.log(err)
+    //     }
+    // }
     let pc = newPeerConnection()
 
 
@@ -44,7 +53,7 @@
             // iceTransportPolicy: "relay"
         })
 
-        stream.getTracks().forEach(track => pc.addTrack(track, stream))
+        //stream.getTracks().forEach(track => pc.addTrack(track, stream))
 
         pc.addEventListener('track', (e) => {
             console.log(e)
@@ -88,12 +97,12 @@
 
         pc.oniceconnectionstatechange = (e) => {
             console.log(e)
-            // if (pc.iceConnectionState == 'disconnected') {
-            //     remoteVideo.srcObject = null
-            //     cancelCallButton.style.display = 'none'
-            //     pc.close()
-            //     pc = newPeerConnection()
-            // }
+            if (pc.iceConnectionState == 'disconnected') {
+                remoteVideo.srcObject = null
+                cancelCallButton.style.display = 'none'
+                pc.close()
+                pc = newPeerConnection()
+            }
         }
 
         return pc
@@ -104,7 +113,7 @@
 
 
 
-    localVideo.srcObject = stream;
+    
 
     /* Wait for incoming (join) */
     let incomingContainer = document.querySelector('.incoming-container')
@@ -119,6 +128,10 @@
                 let btn = document.createElement('button')
                 btn.innerText = `Incoming call ${call.caller}`
                 btn.addEventListener('click', async () => {
+                    cancelCall()
+                    let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+                    stream.getTracks().forEach(track => pc.addTrack(track, stream))
+                    localVideo.srcObject = stream;
                     await createAnswer(call.offer, call.id)
                     waitIceCanditates(call.caller)
                 })
@@ -154,12 +167,15 @@
     calleeInput.addEventListener('keyup', (e) => {
         if (e.target.value == '') {
             callButton.disabled = true
+            screenshareButton.disabled = true
         } else {
             callButton.disabled = false
+            screenshareButton.disabled = false
         }
     })
 
     let callButton = document.querySelector('#call')
+    let screenshareButton = document.querySelector('#screenshare')
 
     let callingPlaceholder = document.querySelector('.calling-placeholder')
 
@@ -176,13 +192,42 @@
         fetchAbort = new AbortController()
         callingPlaceholder.style.display = 'flex'
         let callee = calleeInput.value
+        cancelCall()
+        try {
+        let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+        stream.getTracks().forEach(track => pc.addTrack(track, stream))
+        localVideo.srcObject = stream;
+    } catch (err) {
+
+    }
+        await createOffer(callee)
+        waitIceCanditates(callee)
+        calleeInput.value = ''
+    })
+
+    screenshareButton.addEventListener('click', async() => {
+        screenshareButton.disabled = true
+        
+        
+        
+        cancelCall()
+        try {
+        let stream = await navigator.mediaDevices.getDisplayMedia({})
+        stream.getTracks().forEach(track => pc.addTrack(track, stream))
+        localVideo.srcObject = stream;
+        } catch (err) {
+
+        }
+        let callee = calleeInput.value
+        callingPlaceholder.style.display = 'flex'
+        fetchAbort = new AbortController()
         await createOffer(callee)
         waitIceCanditates(callee)
         calleeInput.value = ''
     })
 
     createOffer = async (callee) => {
-        cancelCall() //cancel current
+        // cancelCall() //cancel current
 
         pc.currentCallID = window.URL.createObjectURL(new Blob([])).substr(-36)
 
@@ -221,7 +266,7 @@
 
     /* Answer */
     async function createAnswer(offer, id) {
-        cancelCall() //cancel current
+        // cancelCall() //cancel current
 
         pc.currentCallID = id
         await pc.setRemoteDescription({ "type": offer.type, sdp: offer.sdp })
