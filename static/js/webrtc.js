@@ -11,6 +11,11 @@
         let pc = new RTCPeerConnection({
             iceServers: [{
                 urls:  ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19305" ]
+            },
+            {
+                urls: 'turn:numb.viagenie.ca',
+                credential: 'muazkh',
+                username: 'webrtc@live.com'
             }]
         })
 
