@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -169,15 +170,27 @@ func IceCandidatesGET(w http.ResponseWriter, r *http.Request) {
 func IceCandidatesPOST(w http.ResponseWriter, r *http.Request) {
 	session := session.Instance(r)
 
-	iceCandidates := []IceCandidate{}
+	// iceCandidates := []IceCandidate{}
+	// dec := json.NewDecoder(r.Body)
+	// err := dec.Decode(&iceCandidates)
+	// if err != nil {
+	// 	return
+	// }
+
+	// user := session.Values["first_name"].(string)
+	// if WebrtcSubscribers[user] != nil {
+	// 	WebrtcSubscribers[user].IceCandidates = iceCandidates
+	// }
+
+	iceCandidate := IceCandidate{}
 	dec := json.NewDecoder(r.Body)
-	err := dec.Decode(&iceCandidates)
+	err := dec.Decode(&iceCandidate)
 	if err != nil {
 		return
 	}
-
 	user := session.Values["first_name"].(string)
 	if WebrtcSubscribers[user] != nil {
-		WebrtcSubscribers[user].IceCandidates = iceCandidates
+		WebrtcSubscribers[user].IceCandidates = append(WebrtcSubscribers[user].IceCandidates, iceCandidate)
 	}
+	fmt.Println("Recieved ICE from", user)
 }

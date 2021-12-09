@@ -29,20 +29,31 @@
 
         pc.onicecandidate = async (e) => {
             console.log(e)
-            if (e.candidate !== null) {
-                candidates.push(e.candidate.toJSON())
-                console.log(e)
-            } else if (e.candidate === null && candidates.length !== 0) {
-                console.log(candidates)
-                await fetch("/webrtc/icecandidates", {
+            if (e.candidate !== null){
+                fetch("/webrtc/icecandidates", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify(candidates)
+                    body: JSON.stringify(e.candidate.toJSON())
                 })
-                candidates = []
             }
+
+            //NOT TRICLE SOLUTION
+            // if (e.candidate !== null) {
+            //     candidates.push(e.candidate.toJSON())
+            //     console.log(e)
+            // } else if (e.candidate === null && candidates.length !== 0) {
+            //     console.log(candidates)
+            //     await fetch("/webrtc/icecandidates", { //???? await?
+            //         method: "POST",
+            //         headers: {
+            //             "Content-Type": "application/json"
+            //         },
+            //         body: JSON.stringify(candidates)
+            //     })
+            //     candidates = []
+            // }
         }
 
         pc.oniceconnectionstatechange = () => {
