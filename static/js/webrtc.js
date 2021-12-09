@@ -28,12 +28,12 @@
                 //     "urls": "turn:global.turn.twilio.com:443?transport=tcp", 
                 //     "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
                 // },
-                // {
-                //     "url": "stun:5.255.100.110:3478",
-                //     "username": "admin",
-                //     "urls": "stun:5.255.100.110:3478",
-                //     "credential": "admin"
-                // },
+                {
+                    "url": "stun:5.255.100.110:3478",
+                    "username": "admin",
+                    "urls": "stun:5.255.100.110:3478",
+                    "credential": "admin"
+                },
                 {
                     "url": "turn:5.255.100.110:3478",
                     "username": "admin",
@@ -41,7 +41,7 @@
                     "credential": "admin"
                 },
             ],
-            iceTransportPolicy: "relay"
+            // iceTransportPolicy: "relay"
         })
 
         stream.getTracks().forEach(track => pc.addTrack(track, stream))
