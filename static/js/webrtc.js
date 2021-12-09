@@ -27,14 +27,14 @@
 
         let candidates = []
 
-        pc.onicecandidate = (e) => {
+        pc.onicecandidate = async (e) => {
             console.log(e)
             if (e.candidate !== null) {
                 candidates.push(e.candidate.toJSON())
                 console.log(e)
             } else if (e.candidate === null && candidates.length !== 0) {
                 console.log(candidates)
-                fetch("/webrtc/icecandidates", {
+                await fetch("/webrtc/icecandidates", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -227,12 +227,12 @@
         })
         let response = await result.json()
         console.log(response)
-        if (response == null) {
-            setTimeout(waitIceCanditates(caller), 500)
-        } else {
+        if (response !== null) {
             response.forEach(c => {
                 pc.addIceCandidate(c)
             })
+        } else {
+            setTimeout(() => {waitIceCanditates(caller)}, 1000)
         }
     }
 })()
