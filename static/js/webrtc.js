@@ -72,17 +72,17 @@
     let peerConfig = {
         iceServers: [
             {
-                "url": "stun:5.255.100.110:3478",
-                "username": "admin",
-                "urls": "stun:5.255.100.110:3478",
-                "credential": "admin"
+                "url": "stun:23.228.231.11:3478",
+                "username": "guest",
+                "urls": "stun:23.228.231.11:3478",
+                "credential": "krxo736n55sthlvu3t8u15jhltf02131"
             },
-            {
-                "url": "turn:5.255.100.110:3478",
-                "username": "admin",
-                "urls": "turn:5.255.100.110:3478",
-                "credential": "admin"
-            },
+            // {
+            //     "url": "turn:5.255.100.110:3478",
+            //     "username": "admin",
+            //     "urls": "turn:5.255.100.110:3478",
+            //     "credential": "admin"
+            // },
         ]
     }
     startListen() //always wait for incoming
