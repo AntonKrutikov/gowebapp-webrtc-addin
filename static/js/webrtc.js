@@ -69,15 +69,30 @@
 
 
     let peerConnection = null
-    let peerConfig = {}
+    let peerConfig = {
+        iceServers: [
+            {
+                "url": "stun:5.255.100.110:3478",
+                "username": "admin",
+                "urls": "stun:5.255.100.110:3478",
+                "credential": "admin"
+            },
+            {
+                "url": "turn:5.255.100.110:3478",
+                "username": "admin",
+                "urls": "turn:5.255.100.110:3478",
+                "credential": "admin"
+            },
+        ]
+    }
     startListen() //always wait for incoming
 
 
     let fetchAbort = new AbortController()
     let iceFetchAbort = new AbortController()
 
-    function createNewPeerConnection(config) {
-        let peer = new RTCPeerConnection(config)
+    function createNewPeerConnection() {
+        let peer = new RTCPeerConnection(peerConfig)
 
         peer.onicecandidate = (e) => {
             if (e.candidate !== null) {
