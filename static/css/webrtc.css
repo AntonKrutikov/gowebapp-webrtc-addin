@@ -63,7 +63,7 @@
     z-index: 10;
 }
 .webrtc-remote-video {
-    /* position: absolute; */
+    position: absolute;
     max-width: 100%;
     max-height: 100%;
     object-fit: scale-down;
