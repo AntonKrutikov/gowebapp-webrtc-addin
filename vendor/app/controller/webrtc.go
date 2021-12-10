@@ -1,9 +1,9 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
-	"time"
 
 	"app/shared/session"
 	"app/shared/view"
@@ -37,14 +37,14 @@ type Offer struct {
 }
 
 type Call struct {
-	ID            string     `json:"id"`
-	Caller        string     `json:"caller"`
-	Callee        string     `json:"callee"`
-	Offer         Offer      `json:"offer"`
-	Accept        chan Offer `json:"-"`
-	Type          string     `json:"type"` //offer,answer or cancel
-	IceCandidates map[string][]IceCandidate
-	IceMutex      *sync.RWMutex
+	ID            string                    `json:"id"`
+	Caller        string                    `json:"caller"`
+	Callee        string                    `json:"callee"`
+	Offer         Offer                     `json:"offer"`
+	Accept        chan Offer                `json:"-"`
+	Type          string                    `json:"type"` //offer,answer or cancel
+	IceCandidates map[string][]IceCandidate `json:"-"`
+	IceMutex      *sync.RWMutex             `json:"-"`
 }
 
 func (c *Call) Cancel() {
@@ -75,6 +75,7 @@ type WebrtcSubscriber struct {
 	Name          string
 	Incoming      chan Call //TODO
 	IceCandidates chan IceCandidate
+	Reject        chan Call
 }
 
 var WebrtcSubscribers = map[string]*WebrtcSubscriber{}
@@ -90,6 +91,7 @@ func WebrtcListenningGET(w http.ResponseWriter, r *http.Request) {
 		Name:          user_name,
 		Incoming:      make(chan Call),
 		IceCandidates: make(chan IceCandidate),
+		Reject:        make(chan Call),
 	}
 
 	subscribersMutex.Lock()
@@ -99,6 +101,9 @@ func WebrtcListenningGET(w http.ResponseWriter, r *http.Request) {
 	select {
 	case call := <-subscriber.Incoming:
 		j, _ := json.Marshal(call)
+		w.Write(j)
+	case reject := <-subscriber.Reject:
+		j, _ := json.Marshal(reject)
 		w.Write(j)
 	case <-notifier.CloseNotify():
 		subscribersMutex.Lock()
@@ -191,9 +196,6 @@ func IceCandidatesGET(w http.ResponseWriter, r *http.Request) {
 		w.Write(j)
 	case <-notifier.CloseNotify():
 		return
-	case <-time.After(45 * time.Second):
-		w.WriteHeader(404)
-		return
 	}
 }
 
@@ -230,4 +232,30 @@ func IceCandidatesPOST(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+
+func WebrtcCancelGET(w http.ResponseWriter, r *http.Request) {
+	session := session.Instance(r)
+	callId := r.URL.Query().Get("callid")
+	user := session.Values["username"].(string)
+
+	fmt.Println(callId, user)
+
+	for _, c := range PendingCalls {
+		if c.ID == callId {
+
+			cancel := Call{
+				ID:   c.ID,
+				Type: "cancel",
+			}
+			if c.Caller == user && WebrtcSubscribers[c.Callee] != nil && WebrtcSubscribers[c.Callee].Reject != nil {
+				WebrtcSubscribers[c.Callee].Reject <- cancel
+			}
+			if c.Callee == user && WebrtcSubscribers[c.Caller] != nil && WebrtcSubscribers[c.Caller].Reject != nil {
+				WebrtcSubscribers[c.Caller].Reject <- cancel
+
+			}
+		}
+	}
+
 }

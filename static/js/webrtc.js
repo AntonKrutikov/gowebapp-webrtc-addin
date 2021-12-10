@@ -20,7 +20,7 @@
     let webrtcCancelButton = document.createElement('div')
     webrtcCancelButton.classList.add('webrtc-cancel-button')
     webrtcCancelButtonImg = document.createElement('img')
-    webrtcCancelButtonImg.src = 'static/assets/end-call.png'
+    webrtcCancelButtonImg.src = 'static/assets/end-call_128.png'
     webrtcCancelButton.addEventListener('click', () => {
         endCall()
     })
@@ -30,7 +30,7 @@
     let webrtcAcceptButton = document.createElement('div')
     webrtcAcceptButton.classList.add('webrtc-cancel-button')
     webrtcAcceptButtonImg = document.createElement('img')
-    webrtcAcceptButtonImg.src = 'static/assets/accept-call.png'
+    webrtcAcceptButtonImg.src = 'static/assets/accept-call_128.png'
     webrtcAcceptButton.addEventListener('click', () => {
         let callId = webrtcAcceptButton.dataset.callId
         let caller = webrtcAcceptButton.dataset.caller
@@ -113,9 +113,13 @@
         }
 
         peer.onconnectionstatechange = (e) => {
+            console.log(peer.connectionState)
             if (peer.connectionState === 'connected') {
                 iceFetchAbort.abort()
                 iceFetchAbort = new AbortController()
+            }
+            if (peer.connectionState === 'disconnected') {
+                calleeDisconnected()
             }
         }
 
@@ -126,10 +130,10 @@
             }
             webrtcRemoteStream.srcObject = e.streams[0]
 
-            if(webrtcPopup.contains(webrtcCallInfo)) {
+            if (webrtcPopup.contains(webrtcCallInfo)) {
                 webrtcPopup.removeChild(webrtcCallInfo)
             }
-            if(webrtcCallButtons.contains(webrtcAcceptButton)) {
+            if (webrtcCallButtons.contains(webrtcAcceptButton)) {
                 webrtcCallButtons.removeChild(webrtcAcceptButton)
             }
         })
@@ -139,7 +143,7 @@
 
     async function startCall(callee) {
         if (!hasActiveCall()) {
-            if(webrtcPopup.contains(webrtcRemoteStream)){
+            if (webrtcPopup.contains(webrtcRemoteStream)) {
                 webrtcPopup.removeChild(webrtcRemoteStream)
             }
             webrtcPopup.prepend(webrtcCallInfo)
@@ -151,9 +155,9 @@
             peerConnection = createNewPeerConnection()
 
             try {
-            let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-            webrtcLocalStream.srcObject = stream
-            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream))
+                let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+                webrtcLocalStream.srcObject = stream
+                stream.getTracks().forEach(track => peerConnection.addTrack(track, stream))
             } catch (err) {
                 console.log(err)
             }
@@ -183,6 +187,21 @@
         webrtcSubscriberInfo.classList.remove('animate-scale')
     }
 
+    function calleeBusy() {
+        webrtcSubscriberInfo.innerText = `Busy`
+        webrtcSubscriberInfo.classList.remove('animate-scale')
+    }
+
+    function calleeDisconnected() {
+        webrtcSubscriberInfo.innerText = `Connection lost`
+        webrtcSubscriberInfo.classList.remove('animate-scale')
+        webrtcRemoteStream.srcObject = null
+        if (webrtcPopup.contains(webrtcRemoteStream)){
+            webrtcPopup.removeChild(webrtcRemoteStream)
+        }
+        webrtcPopup.prepend(webrtcCallInfo)
+    }
+
     function hasActiveCall() {
         return document.body.contains(webrtcPopup)
     }
@@ -197,6 +216,13 @@
 
     function endCall() {
         webrtcPopupRemove()
+        let callId = webrtcAcceptButton.dataset.callId
+        if (callId) {
+            fetch(`/webrtc/cancel?callid=${callId}`, {
+                method: 'GET'
+            })
+        }
+
         if (webrtcCallButtons.contains(webrtcCancelButton)) {
             webrtcCallButtons.removeChild(webrtcCancelButton)
         }
@@ -214,6 +240,7 @@
             stream.getTracks().forEach(track => track.stop())
         }
         webrtcRemoteStream.srcObject = null
+
         if (peerConnection) {
             peerConnection.close()
             peerConnection = null
@@ -266,14 +293,20 @@
         let call = await response.json()
         if (call) {
             let indx = incoming.findIndex(c => c.id == call.id)
+            //save all
             if (call.type == 'offer' && indx == -1) {
                 incoming.push(call)
             }
+            //but send busy to all inciming after first
+            if (call.type == 'offer' && hasActiveCall()){
+                fetch(`/webrtc/cancel?callid=${call.id}`, {
+                    method: 'GET'
+                })
+            }
             if (call.type == 'cancel') {
                 incoming.splice(indx, 1)
+                calleeBusy()
             }
-            if (call.type == 'ice')
-            console.log(call)
         }
         incomingCall(incoming)
         setTimeout(startListen, 500)
@@ -284,12 +317,12 @@
             call = incomig[0]
             webrtcSubscriberInfo.innerText = call.caller
             webrtcSubscriberInfo.classList.add('animate-scale')
-            webrtcCallButtons.appendChild(webrtcCancelButton)
             webrtcCallButtons.appendChild(webrtcAcceptButton)
+            webrtcCallButtons.appendChild(webrtcCancelButton)
             webrtcAcceptButton.dataset.caller = call.caller
             webrtcAcceptButton.dataset.offer = JSON.stringify(call.offer)
             webrtcAcceptButton.dataset.callId = call.id
-            if(webrtcPopup.contains(webrtcRemoteStream)){
+            if (webrtcPopup.contains(webrtcRemoteStream)) {
                 webrtcPopup.removeChild(webrtcRemoteStream)
             }
             webrtcPopup.prepend(webrtcCallInfo)
@@ -355,42 +388,42 @@
     function dragElement(elmnt) {
         var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
         if (document.getElementById(elmnt.id + "header")) {
-          // if present, the header is where you move the DIV from:
-          document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+            // if present, the header is where you move the DIV from:
+            document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
         } else {
-          // otherwise, move the DIV from anywhere inside the DIV:
-          elmnt.onmousedown = dragMouseDown;
+            // otherwise, move the DIV from anywhere inside the DIV:
+            elmnt.onmousedown = dragMouseDown;
         }
-      
+
         function dragMouseDown(e) {
-          e = e || window.event;
-          e.preventDefault();
-          // get the mouse cursor position at startup:
-          pos3 = e.clientX;
-          pos4 = e.clientY;
-          document.onmouseup = closeDragElement;
-          // call a function whenever the cursor moves:
-          document.onmousemove = elementDrag;
+            e = e || window.event;
+            e.preventDefault();
+            // get the mouse cursor position at startup:
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            // call a function whenever the cursor moves:
+            document.onmousemove = elementDrag;
         }
-      
+
         function elementDrag(e) {
-          e = e || window.event;
-          e.preventDefault();
-          // calculate the new cursor position:
-          pos1 = pos3 - e.clientX;
-          pos2 = pos4 - e.clientY;
-          pos3 = e.clientX;
-          pos4 = e.clientY;
-          // set the element's new position:
-          elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-          elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            e = e || window.event;
+            e.preventDefault();
+            // calculate the new cursor position:
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            // set the element's new position:
+            elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+            elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
         }
-      
+
         function closeDragElement() {
-          // stop moving when mouse button is released:
-          document.onmouseup = null;
-          document.onmousemove = null;
+            // stop moving when mouse button is released:
+            document.onmouseup = null;
+            document.onmousemove = null;
         }
-      }
+    }
 
 })()

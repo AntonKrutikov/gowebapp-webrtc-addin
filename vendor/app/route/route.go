@@ -117,6 +117,7 @@ func routes() *httprouter.Router {
 	r.POST("/webrtc/answer", hr.Handler(alice.New(acl.DisallowAnon).ThenFunc(controller.WebrtcAnswerPOST)))
 	r.GET("/webrtc/icecandidates", hr.Handler(alice.New(acl.DisallowAnon).ThenFunc(controller.IceCandidatesGET)))
 	r.POST("/webrtc/icecandidates", hr.Handler(alice.New(acl.DisallowAnon).ThenFunc(controller.IceCandidatesPOST)))
+	r.GET("/webrtc/cancel", hr.Handler(alice.New(acl.DisallowAnon).ThenFunc(controller.WebrtcCancelGET)))
 
 	return r
 }
