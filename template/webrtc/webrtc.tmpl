@@ -5,10 +5,10 @@
 {{define "content"}}
 <div class="container">
 	<div class="page-header">
-		<h1>Hello, {{.first_name}}</h1>
+		<h1>Hello, {{.username}}</h1>
         <p>Your id is: {{.user_id}}</p>
 	</div>
-    <div class="video-container">
+    <!-- <div class="video-container">
         <div class="video">
             <video id="localVideo" playsinline="" autoplay="" muted=""></video>
         </div>
@@ -26,6 +26,10 @@
     <input type="text" id="callee"/>
     <button id="call" class="call" value="call" disabled="disabled">videocall</button>
     <button id="screenshare" class="call" value="call" disabled="disabled">screenshare</button>
+    -->
+    <span class="webrtc-callable" data-callto="Alice">Alice</span>
+    <span class="webrtc-callable" data-callto="Anton">Anton</span>
+
 	{{template "footer" .}}
 </div>
 {{JS "static/js/webrtc.js"}}

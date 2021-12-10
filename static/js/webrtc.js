@@ -1,238 +1,219 @@
 (async () => {
-    const offerOptions = {
-        offerToReceiveAudio: 1,
-        offerToReceiveVideo: 1
-    };
 
-    // let stream 
-    // try {
-    //     stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-    // } catch (err) {
-    //     try {
-    //     stream = captureStream = await navigator.mediaDevices.getDisplayMedia({})
-    //     } catch (e) {
-    //     console.log(err)
-    //     }
-    // }
-    let pc = newPeerConnection()
+    let webrtcPopup = document.createElement('div')
+    webrtcPopup.classList.add('webrtc-popup')
+    dragElement(webrtcPopup);
 
+    let webrtcCallInfo = document.createElement('div')
+    webrtcCallInfo.classList.add('webrtc-calling-info')
+    webrtcPopup.appendChild(webrtcCallInfo)
 
-    function newPeerConnection() {
-        let pc = new RTCPeerConnection({
-            iceServers: [
-                // {
-                //      "url": "turn:global.turn.twilio.com:3478?transport=udp", 
-                //      "username": "1253a87ead090b1489b8b1370697c00b7def1268bb41325f1526d7e6b0f7486b", 
-                //      "urls": "turn:global.turn.twilio.com:3478?transport=udp", 
-                //      "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
-                //     }, 
-                // { 
-                //     "url": "turn:global.turn.twilio.com:3478?transport=tcp", 
-                //     "username": "1253a87ead090b1489b8b1370697c00b7def1268bb41325f1526d7e6b0f7486b",
-                //     "urls": "turn:global.turn.twilio.com:3478?transport=tcp", 
-                //     "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
-                // }, { 
-                //     "url": "turn:global.turn.twilio.com:443?transport=tcp", 
-                //     "username": "1253a87ead090b1489b8b1370697c00b7def1268bb41325f1526d7e6b0f7486b", 
-                //     "urls": "turn:global.turn.twilio.com:443?transport=tcp", 
-                //     "credential": "+fCwYCr6cbe42bBbRZx2kgjITYYshay1+oZPCUXypSU=" 
-                // },
-                {
-                    "url": "stun:5.255.100.110:3478",
-                    "username": "admin",
-                    "urls": "stun:5.255.100.110:3478",
-                    "credential": "admin"
-                },
-                {
-                    "url": "turn:5.255.100.110:3478",
-                    "username": "admin",
-                    "urls": "turn:5.255.100.110:3478",
-                    "credential": "admin"
-                },
-            ],
-            // iceTransportPolicy: "relay"
+    let webrtcSubscriberInfo = document.createElement('div')
+    webrtcSubscriberInfo.classList.add('webrtc-subscriber-info')
+    webrtcCallInfo.appendChild(webrtcSubscriberInfo)
+
+    /* bottom buttons section */
+    let webrtcCallButtons = document.createElement('div')
+    webrtcCallButtons.classList.add('webrtc-buttons')
+    webrtcPopup.appendChild(webrtcCallButtons)
+
+    let webrtcCancelButton = document.createElement('div')
+    webrtcCancelButton.classList.add('webrtc-cancel-button')
+    webrtcCancelButtonImg = document.createElement('img')
+    webrtcCancelButtonImg.src = 'static/assets/end-call.png'
+    webrtcCancelButton.addEventListener('click', () => {
+        endCall()
+    })
+    webrtcCancelButton.appendChild(webrtcCancelButtonImg)
+    // webrtcCallButtons.appendChild(webrtcCancelButton)
+
+    let webrtcAcceptButton = document.createElement('div')
+    webrtcAcceptButton.classList.add('webrtc-cancel-button')
+    webrtcAcceptButtonImg = document.createElement('img')
+    webrtcAcceptButtonImg.src = 'static/assets/accept-call.png'
+    webrtcAcceptButton.addEventListener('click', () => {
+        let callId = webrtcAcceptButton.dataset.callId
+        let caller = webrtcAcceptButton.dataset.caller
+        let offer = JSON.parse(webrtcAcceptButton.dataset.offer)
+
+        answerCall(callId, caller, offer)
+    })
+    webrtcAcceptButton.appendChild(webrtcAcceptButtonImg)
+    // webrtcCallButtons.appendChild(webrtcAcceptButton)
+
+    /* caller small video section */
+    let webrtcLocalStream = document.createElement('video')
+    webrtcLocalStream.classList.add('webrtc-local-video')
+    webrtcLocalStream.autoplay = true
+    webrtcLocalStream.muted = true
+    webrtcLocalStream.playsInline = true
+
+    webrtcPopup.appendChild(webrtcLocalStream)
+
+    let webrtcCallables = document.querySelectorAll('.webrtc-callable')
+    webrtcCallables.forEach(callable => {
+        callable.addEventListener('click', (e) => {
+            let callto = callable.dataset.callto
+            if (callto) {
+                startCall(callto)
+            }
         })
+    })
 
-        //stream.getTracks().forEach(track => pc.addTrack(track, stream))
+    /* callee remote video */
+    let webrtcRemoteStream = document.createElement('video')
+    webrtcRemoteStream.classList.add('webrtc-remote-video')
+    webrtcRemoteStream.autoplay = true
+    webrtcRemoteStream.playsInline = true
+    webrtcRemoteStream.muted = false
 
-        pc.addEventListener('track', (e) => {
-            console.log(e)
-            incomingContainer.style.display = 'none'
-            remoteVideo.srcObject = e.streams[0]
-            cancelCallButton.style.display = 'flex'
-        })
 
-        /* ICE */
+    let peerConnection = null
+    let peerConfig = {}
+    startListen() //always wait for incoming
 
-        let candidates = []
 
-        pc.onicecandidate = (e) => {
+    let fetchAbort = new AbortController()
+    let iceFetchAbort = new AbortController()
+
+    function createNewPeerConnection(config) {
+        let peer = new RTCPeerConnection(config)
+
+        peer.onicecandidate = (e) => {
             if (e.candidate !== null) {
-                console.log(e.candidate.toJSON())
+                console.log(e.candidate)
                 fetch("/webrtc/icecandidates", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify(e.candidate.toJSON())
+                    body: JSON.stringify({
+                        callid: peer.callId,
+                        candidate: e.candidate.candidate,
+                        sdpMid: e.candidate.sdpMid,
+                        SdpMLineIndex: e.candidate.SdpMLineIndex
+                    })
                 })
             }
-
-            //NOT TRICLE SOLUTION
-            // if (e.candidate !== null) {
-            //     candidates.push(e.candidate.toJSON())
-            //     console.log(e)
-            // } else if (e.candidate === null && candidates.length !== 0) {
-            //     console.log(candidates)
-            //     await fetch("/webrtc/icecandidates", { //???? await?
-            //         method: "POST",
-            //         headers: {
-            //             "Content-Type": "application/json"
-            //         },
-            //         body: JSON.stringify(candidates)
-            //     })
-            //     candidates = []
-            // }
         }
 
-        pc.oniceconnectionstatechange = (e) => {
-            console.log(e)
-            if (pc.iceConnectionState == 'disconnected') {
-                remoteVideo.srcObject = null
-                cancelCallButton.style.display = 'none'
-                pc.close()
-                pc = newPeerConnection()
+        peer.onconnectionstatechange = (e) => {
+            if (peer.connectionState === 'connected') {
+                iceFetchAbort.abort()
+                iceFetchAbort = new AbortController()
             }
         }
 
-        return pc
-    }
-
-    const localVideo = document.getElementById('localVideo');
-    const remoteVideo = document.getElementById('remoteVideo');
-
-
-
-    
-
-    /* Wait for incoming (join) */
-    let incomingContainer = document.querySelector('.incoming-container')
-
-    async function showIncoming(incoming) {
-        incomingContainer.style.display = 'none'
-        incomingContainer.replaceChildren();
-
-        if (incoming && incoming.length > 0) {
-
-            incoming.forEach(call => {
-                let btn = document.createElement('button')
-                btn.innerText = `Incoming call ${call.caller}`
-                btn.addEventListener('click', async () => {
-                    cancelCall()
-                    let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-                    stream.getTracks().forEach(track => pc.addTrack(track, stream))
-                    localVideo.srcObject = stream;
-                    await createAnswer(call.offer, call.id)
-                    waitIceCanditates(call.caller)
-                })
-                incomingContainer.appendChild(btn)
-            })
-
-            incomingContainer.style.display = 'flex'
-        }
-    }
-
-    let incoming = []
-    async function waitForCalls() {
-        let response = await fetch('/webrtc/listennig')
-        let call = await response.json()
-        if (call) {
-            let indx = incoming.findIndex(c => c.id == call.id)
-            if (call.type == 'new' && indx == -1) {
-                incoming.push(call)
+        peer.addEventListener('track', (e) => {
+            webrtcPopup.prepend(webrtcRemoteStream)
+            if (webrtcRemoteStream.srcObject) {
+                return
             }
-            if (call.type == 'cancel') {
-                incoming.splice(indx, 1)
+            webrtcRemoteStream.srcObject = e.streams[0]
+
+            if(webrtcPopup.contains(webrtcCallInfo)) {
+                webrtcPopup.removeChild(webrtcCallInfo)
+            }
+            if(webrtcCallButtons.contains(webrtcAcceptButton)) {
+                webrtcCallButtons.removeChild(webrtcAcceptButton)
+            }
+        })
+
+        return peer
+    }
+
+    async function startCall(callee) {
+        if (!hasActiveCall()) {
+            if(webrtcPopup.contains(webrtcRemoteStream)){
+                webrtcPopup.removeChild(webrtcRemoteStream)
+            }
+            webrtcPopup.prepend(webrtcCallInfo)
+            webrtcSubscriberInfo.innerText = callee
+            webrtcSubscriberInfo.classList.add('animate-scale')
+            webrtcCallButtons.appendChild(webrtcCancelButton)
+            webrtcPopupShow()
+
+            peerConnection = createNewPeerConnection()
+
+            try {
+            let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+            webrtcLocalStream.srcObject = stream
+            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream))
+            } catch (err) {
+                console.log(err)
+            }
+
+
+            try {
+                let result = await createOffer(peerConnection, callee, fetchAbort)
+                if (result == 204) {
+                    calleeNotOnline(callee)
+                }
+                if (result == 404) {
+                    calleeNotRespond(callee)
+                }
+            } catch (err) {
+                console.log(err, result)
             }
         }
-        showIncoming(incoming)
-        setTimeout(waitForCalls, 500)
     }
-    waitForCalls()
 
+    function calleeNotOnline(callee) {
+        webrtcSubscriberInfo.innerText = `${callee} not online`
+        webrtcSubscriberInfo.classList.remove('animate-scale')
+    }
 
-    /* Call (create offer part) */
+    function calleeNotRespond(callee) {
+        webrtcSubscriberInfo.innerText = `${callee} not respond`
+        webrtcSubscriberInfo.classList.remove('animate-scale')
+    }
 
-    let calleeInput = document.querySelector('#callee')
-    calleeInput.addEventListener('keyup', (e) => {
-        if (e.target.value == '') {
-            callButton.disabled = true
-            screenshareButton.disabled = true
-        } else {
-            callButton.disabled = false
-            screenshareButton.disabled = false
+    function hasActiveCall() {
+        return document.body.contains(webrtcPopup)
+    }
+
+    function webrtcPopupShow() {
+        document.body.appendChild(webrtcPopup)
+    }
+
+    function webrtcPopupRemove() {
+        document.body.removeChild(webrtcPopup)
+    }
+
+    function endCall() {
+        webrtcPopupRemove()
+        if (webrtcCallButtons.contains(webrtcCancelButton)) {
+            webrtcCallButtons.removeChild(webrtcCancelButton)
         }
-    })
+        if (webrtcCallButtons.contains(webrtcAcceptButton)) {
+            webrtcCallButtons.removeChild(webrtcAcceptButton)
+        }
+        delete webrtcAcceptButton.dataset.callId
+        delete webrtcAcceptButton.dataset.caller
+        delete webrtcAcceptButton.dataset.offer
 
-    let callButton = document.querySelector('#call')
-    let screenshareButton = document.querySelector('#screenshare')
-
-    let callingPlaceholder = document.querySelector('.calling-placeholder')
-
-    //Need to abort polling on dialup cancelation
-    let fetchAbort = new AbortController()
-    let abortCallButton = document.querySelector('#abort-call')
-    abortCallButton.addEventListener('click', (e) => {
         fetchAbort.abort()
-        callingPlaceholder.style.display = 'none'
-    })
-
-    callButton.addEventListener('click', async () => {
-        callButton.disabled = true
         fetchAbort = new AbortController()
-        callingPlaceholder.style.display = 'flex'
-        let callee = calleeInput.value
-        cancelCall()
-        try {
-        let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-        stream.getTracks().forEach(track => pc.addTrack(track, stream))
-        localVideo.srcObject = stream;
-    } catch (err) {
-
-    }
-        await createOffer(callee)
-        waitIceCanditates(callee)
-        calleeInput.value = ''
-    })
-
-    screenshareButton.addEventListener('click', async() => {
-        screenshareButton.disabled = true
-        
-        
-        
-        cancelCall()
-        try {
-        let stream = await navigator.mediaDevices.getDisplayMedia({})
-        stream.getTracks().forEach(track => pc.addTrack(track, stream))
-        localVideo.srcObject = stream;
-        } catch (err) {
-
+        let stream = webrtcLocalStream.srcObject
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop())
         }
-        let callee = calleeInput.value
-        callingPlaceholder.style.display = 'flex'
-        fetchAbort = new AbortController()
-        await createOffer(callee)
-        waitIceCanditates(callee)
-        calleeInput.value = ''
-    })
+        webrtcRemoteStream.srcObject = null
+        if (peerConnection) {
+            peerConnection.close()
+            peerConnection = null
+        }
+    }
 
-    createOffer = async (callee) => {
-        // cancelCall() //cancel current
+    //Make a call. webrtc create offer
+    async function createOffer(peer, callee, abort) {
+        peer.callId = window.URL.createObjectURL(new Blob([])).substr(-36)
 
-        pc.currentCallID = window.URL.createObjectURL(new Blob([])).substr(-36)
-
-        let offer = await pc.createOffer(offerOptions)
-        pc.setLocalDescription(offer)
+        let offer = await peer.createOffer({
+            offerToReceiveAudio: 1,
+            offerToReceiveVideo: 1
+        })
+        peer.setLocalDescription(offer)
 
         try {
             let response = await fetch('/webrtc/offer', {
@@ -240,95 +221,161 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ callee: callee, offer: offer, id: pc.currentCallID }),
-                signal: fetchAbort.signal
+                body: JSON.stringify({ callee: callee, offer: offer, id: peer.callId }),
+                signal: abort.signal
             })
             if (response.status == 204) {
-                console.log('Callee not found')
+                return 204
+            }
+            if (response.status == 404) {
+                return 404 //408 code strange behaviour whith fetch
             }
             if (response.status == 200) {
                 let answer = await response.json()
                 if (answer) {
                     console.log(answer)
-                    await pc.setRemoteDescription(answer)
+                    await peerConnection.setRemoteDescription(answer)
+                    listenIceCanditates(peer, callee)
+                    return 200
                 }
             }
         } catch (err) {
             console.log(err)
         }
-        finally {
-            callingPlaceholder.style.display = 'none'
-            callButton.disabled = false
-            setInterval(() => console.log(pc), 10000)
+    }
+
+    //Always waiting for new calls with long polling
+    let incoming = []
+    async function startListen() {
+        let response = await fetch(`/webrtc/listennig`)
+        let call = await response.json()
+        if (call) {
+            let indx = incoming.findIndex(c => c.id == call.id)
+            if (call.type == 'offer' && indx == -1) {
+                incoming.push(call)
+            }
+            if (call.type == 'cancel') {
+                incoming.splice(indx, 1)
+            }
+            if (call.type == 'ice')
+            console.log(call)
+        }
+        incomingCall(incoming)
+        setTimeout(startListen, 500)
+    }
+
+    function incomingCall(incomig) {
+        if (!hasActiveCall() && incomig.length > 0) {
+            call = incomig[0]
+            webrtcSubscriberInfo.innerText = call.caller
+            webrtcSubscriberInfo.classList.add('animate-scale')
+            webrtcCallButtons.appendChild(webrtcCancelButton)
+            webrtcCallButtons.appendChild(webrtcAcceptButton)
+            webrtcAcceptButton.dataset.caller = call.caller
+            webrtcAcceptButton.dataset.offer = JSON.stringify(call.offer)
+            webrtcAcceptButton.dataset.callId = call.id
+            if(webrtcPopup.contains(webrtcRemoteStream)){
+                webrtcPopup.removeChild(webrtcRemoteStream)
+            }
+            webrtcPopup.prepend(webrtcCallInfo)
+            webrtcPopupShow()
         }
     }
 
+    async function answerCall(callId, caller, offer) {
+        peer = createNewPeerConnection()
+        peer.callId = callId
 
-    /* Answer */
-    async function createAnswer(offer, id) {
-        // cancelCall() //cancel current
+        try {
+            let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+            webrtcLocalStream.srcObject = stream
+            stream.getTracks().forEach(track => peer.addTrack(track, stream))
+        } catch (err) {
+            console.log(err)
+        }
 
-        pc.currentCallID = id
-        await pc.setRemoteDescription({ "type": offer.type, sdp: offer.sdp })
-        let answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-        let response = await fetch('/webrtc/answer', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 'id': id, 'offer': answer })
-        })
-        //remove incomig button
-        let indx = incoming.findIndex(c => c.id == pc.currentCallID)
-        console.log(incoming)
+        await peer.setRemoteDescription(offer)
+        let answer = await peer.createAnswer()
+        await peer.setLocalDescription(answer)
+
+        try {
+            let response = await fetch('/webrtc/answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 'id': callId, 'offer': answer }),
+                signal: fetchAbort.signal
+            })
+            listenIceCanditates(peer, caller)
+        } catch (err) {
+            console.log(err)
+        }
+        //remove incomig call from list
+        let indx = incoming.findIndex(call => call.id == callId)
         incoming.splice(indx, 1)
     }
 
 
-
-
-
-    let cancelCallButton = document.querySelector('.cancel-call')
-    cancelCallButton.addEventListener('click', () => {
-        cancelCall()
-    })
-    let cancelCall = () => {
-        let callID = pc.currentCallID
-        remoteVideo.srcObject = null
-        cancelCallButton.style.display = 'none'
-        // fetch('/webrtc/cancel', {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json'
-        //     },
-        //     body: JSON.stringify({ id: callID })
-        // })
-        pc.close()
-        pc = newPeerConnection()
-    }
-
-
-
-    async function waitIceCanditates(caller) {
-        let result = await fetch(`/webrtc/icecandidates?caller=${caller}`, {
-            method: "GET"
+    async function listenIceCanditates(peer, caller) {
+        let result = await fetch(`/webrtc/icecandidates?callid=${peer.callId}`, {
+            method: "GET",
+            signal: iceFetchAbort.signal
         })
-        let response = await result.json()
-        console.log(response)
-        if (pc.connectionState != 'connected') {
-            if (response !== null && pc.connectionState != 'connected') {
-                response.forEach(c => {
-                    pc.addIceCandidate(c)
+
+        let candidates = await result.json()
+        console.log(candidates)
+        if (peer.connectionState != 'connected') {
+            if (candidates.length > 0 !== null && peer.connectionState != 'connected') {
+                candidates.forEach(candidate => {
+                    peer.addIceCandidate(candidate)
+
                 })
-
+                setTimeout(() => { listenIceCanditates(peer, caller) })
             }
-            setTimeout(() => { waitIceCanditates(caller) }, 3000)
-        }
-        //Do we need upgrade candidates....?
-        // else {
-        //     setTimeout(() => { waitIceCanditates(caller) }, 10000)
-        // }
 
+        }
     }
+
+    function dragElement(elmnt) {
+        var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        if (document.getElementById(elmnt.id + "header")) {
+          // if present, the header is where you move the DIV from:
+          document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+        } else {
+          // otherwise, move the DIV from anywhere inside the DIV:
+          elmnt.onmousedown = dragMouseDown;
+        }
+      
+        function dragMouseDown(e) {
+          e = e || window.event;
+          e.preventDefault();
+          // get the mouse cursor position at startup:
+          pos3 = e.clientX;
+          pos4 = e.clientY;
+          document.onmouseup = closeDragElement;
+          // call a function whenever the cursor moves:
+          document.onmousemove = elementDrag;
+        }
+      
+        function elementDrag(e) {
+          e = e || window.event;
+          e.preventDefault();
+          // calculate the new cursor position:
+          pos1 = pos3 - e.clientX;
+          pos2 = pos4 - e.clientY;
+          pos3 = e.clientX;
+          pos4 = e.clientY;
+          // set the element's new position:
+          elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+          elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+        }
+      
+        function closeDragElement() {
+          // stop moving when mouse button is released:
+          document.onmouseup = null;
+          document.onmousemove = null;
+        }
+      }
+
 })()
