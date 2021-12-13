@@ -69,6 +69,15 @@
     webrtcRemoteStream.muted = false
 
     /* minimize button */
+    let mquery = window.matchMedia('(hover: none)')
+    mquery.onchange = (e) => {
+        if (e.matches) {
+            webrtcMaximaize()
+            webrtcRemoteStream.style.width = null
+            webrtcCallInfo.style.width = null
+            webrtcCallButtons.style.width = null
+        }
+    }
     let webrtcMinimizeButon = document.createElement('img')
     webrtcMinimizeButon.src = 'static/assets/minimize.png'
     webrtcMinimizeButon.classList.add('webrtc-minimize')
@@ -101,6 +110,9 @@
 
         webrtcChatContainer.style.display = 'none'
         webrtcChatIcon.style.display = 'none'
+        webrtcRemoteStream.style.width = null
+        webrtcCallInfo.style.width = null
+        webrtcCallButtons.style.width = null
 
         webrtcPopup.dataset.minimized = 'true';
         dragElement(webrtcPopup);

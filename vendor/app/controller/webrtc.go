@@ -55,6 +55,7 @@ func (c *Call) Cancel() {
 			PendingCalls[len(PendingCalls)-1] = nil
 			PendingCalls = PendingCalls[:len(PendingCalls)-1]
 			pendingMutex.Unlock()
+			break
 		}
 	}
 	c.Type = "cancel"
