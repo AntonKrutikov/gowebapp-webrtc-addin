@@ -270,11 +270,10 @@
                 });
             }
             if (peer.connectionState === 'disconnected') {
+                peer.close()
                 if (peerConnection == null) {
                     calleeDisconnected()
                 }
-                peer.close()
-
             }
         }
 
@@ -381,7 +380,7 @@
 
     function endCall() {
         webrtcPopupRemove()
-        let callId = webrtcAcceptButton.dataset.callId
+        let callId = peerConnection?.callId ? peerConnection?.callId : webrtcAcceptButton.dataset.callId
         if (callId) {
             fetch(`/webrtc/cancel?callid=${callId}`, {
                 method: 'GET'
@@ -571,7 +570,7 @@
     }
 
     /* Inform server that we leave page */
-    window.addEventListener("pagehide", (e) => {
+    window.addEventListener("beforeunload", (e) => {
         endCall()
      })
 
