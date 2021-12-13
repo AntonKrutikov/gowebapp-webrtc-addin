@@ -270,10 +270,11 @@
                 });
             }
             if (peer.connectionState === 'disconnected') {
-                peer.close()
                 if (peerConnection == null) {
                     calleeDisconnected()
                 }
+                peer.close()
+
             }
         }
 
