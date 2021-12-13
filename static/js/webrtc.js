@@ -571,7 +571,7 @@
     }
 
     /* Inform server that we leave page */
-    window.addEventListener("beforeunload", (e) => {
+    window.addEventListener("pagehide", (e) => {
         endCall()
      })
 
