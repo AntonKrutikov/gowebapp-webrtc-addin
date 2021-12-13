@@ -233,7 +233,7 @@
 
         peer.onicecandidate = (e) => {
             if (e.candidate !== null) {
-                //console.log(e)
+                console.log(`Local ICE candidate found: ${e.candidate.address} ${e.candidate.protocol} ${e.candidate.type}`)
                 fetch("/webrtc/icecandidates", {
                     method: "POST",
                     headers: {
@@ -251,8 +251,8 @@
 
         peer.onconnectionstatechange = (e) => {
             if (peer.connectionState === 'connected') {
-                iceFetchAbort.abort()
-                iceFetchAbort = new AbortController()
+                // iceFetchAbort.abort()
+                // iceFetchAbort = new AbortController()
                 console.log('PeerConnection: connected')
                 peerConnection.getSenders().map(sender => {
                     const kindOfTrack = sender.track?.kind;
@@ -555,13 +555,19 @@
         })
 
         let candidates = await result.json()
+        candidates.forEach(candidate => {
+            console.log(`Remote ICE candidate recieved: ${candidate.candidate}`)
+        })
         if (peer.connectionState != 'connected') {
             if (candidates.length > 0 !== null && peer.connectionState != 'connected') {
                 candidates.forEach(candidate => {
                     peer.addIceCandidate(candidate)
-
                 })
-                setTimeout(() => { listenIceCanditates(peer, caller) })
+                setTimeout(() => { listenIceCanditates(peer, caller) , 1000})
+                setTimeout(() => {
+                    iceFetchAbort.abort()
+                    iceFetchAbort = new AbortController()
+                }, 10000)
             }
 
         }} catch (err) {
