@@ -41,7 +41,7 @@ type Call struct {
 	Caller        string                    `json:"caller"`
 	Callee        string                    `json:"callee"`
 	Offer         Offer                     `json:"offer"`
-	Accept        chan Offer                `json:"-"`
+	Accept        chan Call                 `json:"-"`
 	Type          string                    `json:"type"` //offer,answer or cancel
 	IceCandidates map[string][]IceCandidate `json:"-"`
 	IceMutex      *sync.RWMutex             `json:"-"`
@@ -132,7 +132,7 @@ func WebrtcOfferPOST(w http.ResponseWriter, r *http.Request) {
 
 	call.Caller = session.Values["username"].(string)
 	call.Type = "offer"
-	call.Accept = make(chan Offer)
+	call.Accept = make(chan Call)
 	call.IceCandidates = map[string][]IceCandidate{}
 	call.IceMutex = &sync.RWMutex{}
 
@@ -155,7 +155,7 @@ func WebrtcOfferPOST(w http.ResponseWriter, r *http.Request) {
 
 func WebrtcAnswerPOST(w http.ResponseWriter, r *http.Request) {
 	//notifier, _ := w.(http.CloseNotifier)
-	//session := session.Instance(r)
+	session := session.Instance(r)
 
 	call := Call{}
 	dec := json.NewDecoder(r.Body)
@@ -164,9 +164,11 @@ func WebrtcAnswerPOST(w http.ResponseWriter, r *http.Request) {
 		return //TODO
 	}
 
+	call.Callee = session.Values["username"].(string)
+
 	for _, c := range PendingCalls {
 		if c.ID == call.ID {
-			c.Accept <- call.Offer
+			c.Accept <- call
 		}
 	}
 }

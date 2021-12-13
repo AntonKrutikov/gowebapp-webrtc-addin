@@ -3,17 +3,18 @@
     top: 50%;
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
-    max-width: 400px;
-    min-width: 300px;
+    max-width: 100%;
+    width: 100%;
     background: #000;
-    max-height: 50%;
-    min-height: 300px;
+    max-height: 100%;
+    height: 100%;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: start;
     justify-content: center;
-    z-index: 2;
+    z-index: 2000;
+    box-shadow: 2px 2px 2px #888;
 }
 .webrtc-calling-info {
     color: #fff;
@@ -43,7 +44,7 @@
     align-items: center;
     justify-content: center;
     min-height: 80px;
-    z-index: 5;
+    z-index: 2001;
 }
 .webrtc-cancel-button {
     margin: 10px;
@@ -56,18 +57,84 @@
 }
 .webrtc-local-video {
     position: absolute;
-    object-fit: scale-down;
-    max-height: 25%;
-    max-width: 25%;
-    top: 10px;
-    right: 10px;
-    z-index: 10;
+    object-fit: cover;
+    height: 25%;
+    width: 25%;
+    top: 0;
+    right: 0;
+    z-index: 2002;
 }
 .webrtc-remote-video {
     position: absolute;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: scale-down;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.webrtc-minimize {
+    filter: invert() opacity(0.5);
+    transform: scaleX(-1);
+    position: absolute;
+    top:0;
+    left:0;
+    width: 48px;
+    height: 48px;
+
+}
+.webrtc-minimize:hover {
+    filter: invert();
+    cursor: pointer;
+}
+.webrtc-chat-container {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 25%;
+    height: 75%;
+    background: #222;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+}
+.webrtc-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column-reverse;
+    overflow-y: scroll;
+}
+.webrtc-chat::-webkit-scrollbar {
+    width: 16px;
+    background-color: #222;
+}
+.webrtc-chat::-webkit-scrollbar-thumb {
+    background-color: #fff;
+    outline: none;
+  }
+.webrtc-chat-icon {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    bottom: calc(80px - 48px);
+    right: 16px;
+    filter: invert();
+    cursor: pointer;
+    z-index: 2002;
+}
+.webrtc-chat-input {
+    border: 1px solid #ccc;
+    z-index: 2100;
+    box-sizing: border-box;
+    padding: 0.5rem;
+    color: #222;
+}
+.webrtc-chat-input:focus {
+    outline: none;
+}
+.webrtc-chat-message {
+    padding: 0.25rem;
+}
+.webrtc-chat-message b {
+    padding-right: 0.5rem;
 }
 @media (hover: none) {
     .webrtc-popup {
@@ -82,13 +149,27 @@
         height: 96px;
     }
     .webrtc-local-video {
-        top: 10%;
+        top: 0;
+        right: 0;
+        max-width: 25%;
+        max-height: 25%;
+        width: unset;
+        height: unset;
+    }
+    .webrtc-minimize {
+        display: none;
+    }
+    /* chat */
+    .webrtc-chat-icon {
+        display: none;
+    }
+    .webrtc-chat-container {
+        display: none;
     }
 }
 
 @media (hover: none) and (orientation: landscape) {
     .webrtc-local-video {
-        top: unset;
-        bottom: 10px;
+
     }
 }
