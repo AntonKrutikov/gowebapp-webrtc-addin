@@ -126,15 +126,30 @@
     box-sizing: border-box;
     padding: 0.5rem;
     color: #222;
+    resize: vertical;
+    min-height: 2rem;
 }
 .webrtc-chat-input:focus {
     outline: none;
 }
 .webrtc-chat-message {
-    padding: 0.25rem;
+    display: flex;
+    flex-direction: row;
+    padding: 0.5rem;
 }
 .webrtc-chat-message b {
     padding-right: 0.5rem;
+}
+.webrtc-chat-caller-name {
+    color: #3F51B5;
+}
+.webrtc-chat-callee-name {
+    color: #2E7D32;
+}
+.webrtc-chat-type-indicator {
+    font-size: 1rem;
+    color: #ccc;
+    text-align: right;
 }
 @media (hover: none) {
     .webrtc-popup {

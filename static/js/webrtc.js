@@ -2,7 +2,6 @@
 
     let webrtcPopup = document.createElement('div')
     webrtcPopup.classList.add('webrtc-popup')
-    // dragElement(webrtcPopup);
 
     let webrtcCallInfo = document.createElement('div')
     webrtcCallInfo.classList.add('webrtc-calling-info')
@@ -38,6 +37,8 @@
         let offer = JSON.parse(webrtcAcceptButton.dataset.offer)
 
         answerCall(callId, caller, callee, offer)
+        //clear chat
+        webrtcChat.replaceChildren()
     })
     webrtcAcceptButton.appendChild(webrtcAcceptButtonImg)
     // webrtcCallButtons.appendChild(webrtcAcceptButton)
@@ -55,6 +56,7 @@
     webrtcCallables.forEach(callable => {
         callable.addEventListener('click', (e) => {
             let callto = callable.dataset.callto
+
             if (callto) {
                 startCall(callto)
             }
@@ -84,7 +86,7 @@
     webrtcMinimizeButon.addEventListener('click', () => {
         /* only on desktops */
         let mquery = window.matchMedia('(hover: none)')
-        if (!mquery.matches){
+        if (!mquery.matches) {
             if (webrtcPopup.dataset.minimized == 'true') {
                 webrtcMaximaize()
             } else {
@@ -140,9 +142,11 @@
     /* simple chat */
     let chat = {
         addMessage(from, msg) {
+            let senderClass = peerConnection.caller == from ? 'webrtc-chat-caller-name' : 'webrtc-chat-callee-name'
             let m = document.createElement('div')
             m.classList.add('webrtc-chat-message')
             let sender = document.createElement('b')
+            sender.classList.add(senderClass)
             let text = document.createElement('span')
             sender.innerText = `${from}:`
             text.innerText = msg
@@ -155,7 +159,7 @@
     webrtcChatIcon = document.createElement('img')
     webrtcChatIcon.src = 'static/assets/chat.png'
     webrtcChatIcon.classList.add('webrtc-chat-icon')
-    webrtcChatIcon.addEventListener('click', ()=> {
+    webrtcChatIcon.addEventListener('click', () => {
         if (webrtcPopup.contains(webrtcChatContainer)) {
             webrtcPopup.removeChild(webrtcChatContainer)
             webrtcChatIcon.style.right = null
@@ -165,7 +169,7 @@
         } else {
             webrtcPopup.appendChild(webrtcChatContainer)
             webrtcChatIcon.style.right = 'calc(25% + 16px)'
-            webrtcRemoteStream.style.width='75%'
+            webrtcRemoteStream.style.width = '75%'
             webrtcCallInfo.style.width = '75%'
             webrtcCallButtons.style.width = '75%'
 
@@ -181,16 +185,32 @@
     webrtcChat.classList.add('webrtc-chat')
     webrtcChatContainer.appendChild(webrtcChat)
     //input
-    webrtcChatInput = document.createElement('input')
+    webrtcChatInput = document.createElement('textarea')
     webrtcChatInput.type = 'text'
     webrtcChatInput.classList.add('webrtc-chat-input')
-    webrtcChatInput.addEventListener('change', (e) => {
-        if(peerDataChannel != null && peerDataChannel.readyState === 'open') {
-            peerDataChannel.send(e.target.value)
-            chat.addMessage(peerConnection.caller,e.target.value)
+    webrtcChatInput.addEventListener('keypress', (e) => {
+        //notify of typing
+        peerDataChannel.send(JSON.stringify({type:'typing'}))
+        var keyCode = e.keyCode || e.which
+        if (keyCode === 13) {
+            if (e.ctrlKey) {
+                e.target.value += "\n"
+            } else {
+                e.preventDefault()
+                if (peerDataChannel != null && peerDataChannel.readyState === 'open') {
+                    peerDataChannel.send(JSON.stringify({type:'chat-message', message: e.target.value}))
+                    chat.addMessage(peerConnection.caller, e.target.value)
+                }
+                e.target.value = ''
+            }
         }
-        e.target.value=''
     })
+    //type indicator
+    webrtcChatTypeIndicator = document.createElement('div')
+    webrtcChatTypeIndicator.classList.add('webrtc-chat-type-indicator')
+    webrtcChatTypeIndicator.innerText = ''
+    webrtcChatContainer.appendChild(webrtcChatTypeIndicator)
+
     webrtcChatContainer.appendChild(webrtcChatInput)
     //webrtcPopup.appendChild(webrtcChatContainer)
 
@@ -207,9 +227,21 @@
         ]
     }
     let peerDataChannel = null
+    let typingIndicatorTimeout = null
     function initDataChannel(datachannel) {
         datachannel.onmessage = (e) => {
-            chat.addMessage(peerConnection.callee,e.data)
+            let data = JSON.parse(e.data)
+            if (data.type == 'chat-message') {
+                clearTimeout(typingIndicatorTimeout)
+                webrtcChatTypeIndicator.innerText = ''
+                chat.addMessage(peerConnection.callee, data.message)
+            } else if (data.type = 'typing') {
+                clearTimeout(typingIndicatorTimeout)
+                webrtcChatTypeIndicator.innerText = 'typing...'
+                typingIndicatorTimeout = setTimeout(() => {
+                    webrtcChatTypeIndicator.innerText = ''
+                }, 2000)
+            }
         }
 
         datachannel.onopen = (e) => {
@@ -251,8 +283,6 @@
 
         peer.onconnectionstatechange = (e) => {
             if (peer.connectionState === 'connected') {
-                // iceFetchAbort.abort()
-                // iceFetchAbort = new AbortController()
                 console.log('PeerConnection: connected')
                 peerConnection.getSenders().map(sender => {
                     const kindOfTrack = sender.track?.kind;
@@ -354,7 +384,7 @@
         webrtcSubscriberInfo.innerText = `Connection lost`
         webrtcSubscriberInfo.classList.remove('animate-scale')
         webrtcRemoteStream.srcObject = null
-        if (webrtcPopup.contains(webrtcRemoteStream)){
+        if (webrtcPopup.contains(webrtcRemoteStream)) {
             webrtcPopup.removeChild(webrtcRemoteStream)
         }
         webrtcPopup.prepend(webrtcCallInfo)
@@ -404,6 +434,9 @@
             stream.getTracks().forEach(track => track.stop())
         }
         webrtcRemoteStream.srcObject = null
+
+        //clear chat
+        webrtcChat.replaceChildren()
 
         if (peerConnection) {
             peerConnection.close()
@@ -465,7 +498,7 @@
                 incoming.push(call)
             }
             //but send busy to all inciming after first
-            if (call.type == 'offer' && hasActiveCall()){
+            if (call.type == 'offer' && hasActiveCall()) {
                 fetch(`/webrtc/cancel?callid=${call.id}`, {
                     method: 'GET'
                 })
@@ -549,28 +582,29 @@
 
     async function listenIceCanditates(peer, caller) {
         try {
-        let result = await fetch(`/webrtc/icecandidates?callid=${peer.callId}`, {
-            method: "GET",
-            signal: iceFetchAbort.signal
-        })
+            let result = await fetch(`/webrtc/icecandidates?callid=${peer.callId}`, {
+                method: "GET",
+                signal: iceFetchAbort.signal
+            })
 
-        let candidates = await result.json()
-        candidates.forEach(candidate => {
-            console.log(`Remote ICE candidate recieved: ${candidate.candidate}`)
-        })
-        if (peer.connectionState != 'connected') {
-            if (candidates.length > 0 !== null && peer.connectionState != 'connected') {
-                candidates.forEach(candidate => {
-                    peer.addIceCandidate(candidate)
-                })
-                setTimeout(() => { listenIceCanditates(peer, caller) , 1000})
-                setTimeout(() => {
-                    iceFetchAbort.abort()
-                    iceFetchAbort = new AbortController()
-                }, 10000)
+            let candidates = await result.json()
+            candidates.forEach(candidate => {
+                console.log(`Remote ICE candidate recieved: ${candidate.candidate}`)
+            })
+            if (peer.connectionState != 'connected') {
+                if (candidates.length > 0 !== null && peer.connectionState != 'connected') {
+                    candidates.forEach(candidate => {
+                        peer.addIceCandidate(candidate)
+                    })
+                    setTimeout(() => { listenIceCanditates(peer, caller), 1000 })
+                    setTimeout(() => {
+                        iceFetchAbort.abort()
+                        iceFetchAbort = new AbortController()
+                    }, 10000)
+                }
+
             }
-
-        }} catch (err) {
+        } catch (err) {
             console.log('Abort ice candidates collect. (cancel fetch to /webrtc/icecandidates/?callid')
         }
     }
@@ -578,7 +612,7 @@
     /* Inform server that we leave page */
     window.addEventListener("beforeunload", (e) => {
         endCall()
-     })
+    })
 
     /* HELPERS */
 

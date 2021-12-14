@@ -48,14 +48,13 @@ type Call struct {
 }
 
 func (c *Call) Cancel() {
+	pendingMutex.Lock()
+	defer pendingMutex.Unlock()
 	for i := range PendingCalls {
 		if PendingCalls[i] == c {
-			pendingMutex.Lock()
 			PendingCalls[i] = PendingCalls[len(PendingCalls)-1]
 			PendingCalls[len(PendingCalls)-1] = nil
 			PendingCalls = PendingCalls[:len(PendingCalls)-1]
-			pendingMutex.Unlock()
-			break
 		}
 	}
 	c.Type = "cancel"
@@ -167,11 +166,13 @@ func WebrtcAnswerPOST(w http.ResponseWriter, r *http.Request) {
 
 	call.Callee = session.Values["username"].(string)
 
+	pendingMutex.Lock()
 	for _, c := range PendingCalls {
 		if c.ID == call.ID {
 			c.Accept <- call
 		}
 	}
+	pendingMutex.Unlock()
 }
 
 func IceCandidatesGET(w http.ResponseWriter, r *http.Request) {
@@ -180,17 +181,28 @@ func IceCandidatesGET(w http.ResponseWriter, r *http.Request) {
 	session := session.Instance(r)
 	user := session.Values["username"].(string)
 
+	var call *Call
+	pendingMutex.Lock()
 	for _, c := range PendingCalls {
 		if c.ID == callId {
-			iceCandidates := c.IceCandidates[user]
-			if len(iceCandidates) > 0 {
-				j, _ := json.Marshal(iceCandidates)
-				c.IceCandidates[user] = []IceCandidate{}
-				w.Write(j)
-				return
-			}
+			call = c
 		}
 	}
+	pendingMutex.Unlock()
+
+	if call != nil {
+		iceCandidates := call.IceCandidates[user]
+		if len(iceCandidates) > 0 {
+			call.IceMutex.Lock()
+			call.IceCandidates[user] = []IceCandidate{}
+			call.IceMutex.Unlock()
+			j, _ := json.Marshal(iceCandidates)
+			w.Write(j)
+			return
+		}
+
+	}
+
 	select {
 	case iceCandidate := <-WebrtcSubscribers[user].IceCandidates:
 		iceCandidates := []IceCandidate{}
@@ -214,27 +226,35 @@ func IceCandidatesPOST(w http.ResponseWriter, r *http.Request) {
 	user := session.Values["username"].(string)
 	iceCandidate.User = user
 
+	var call *Call
+	pendingMutex.Lock()
 	for _, c := range PendingCalls {
 		if c.ID == iceCandidate.CallID {
-			var target string
-			if user == c.Caller {
-				target = c.Callee
-			} else {
-				target = c.Caller
-			}
-			if target != "" && WebrtcSubscribers[target].IceCandidates != nil {
-				select {
-				case WebrtcSubscribers[target].IceCandidates <- iceCandidate:
-					return
-				default:
-					c.IceMutex.Lock()
-					c.IceCandidates[target] = append(c.IceCandidates[target], iceCandidate)
-					c.IceMutex.Unlock()
+			call = c
+		}
+	}
+	pendingMutex.Unlock()
+	if call != nil {
+		var target string
+		if user == call.Caller {
+			target = call.Callee
+		} else {
+			target = call.Caller
+		}
+		if target != "" && WebrtcSubscribers[target] != nil && WebrtcSubscribers[target].IceCandidates != nil {
+			select {
+			case WebrtcSubscribers[target].IceCandidates <- iceCandidate:
 
-				}
+				return
+			default:
+				call.IceMutex.Lock()
+				call.IceCandidates[target] = append(call.IceCandidates[target], iceCandidate)
+				call.IceMutex.Unlock()
+
 			}
 		}
 	}
+
 }
 
 func WebrtcCancelGET(w http.ResponseWriter, r *http.Request) {
@@ -244,20 +264,26 @@ func WebrtcCancelGET(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(callId, user)
 
+	var call *Call
+	pendingMutex.Lock()
 	for _, c := range PendingCalls {
 		if c.ID == callId {
+			call = c
+		}
+	}
+	pendingMutex.Unlock()
+	if call != nil {
 
-			cancel := Call{
-				ID:   c.ID,
-				Type: "cancel",
-			}
-			if c.Caller == user && WebrtcSubscribers[c.Callee] != nil && WebrtcSubscribers[c.Callee].Reject != nil {
-				WebrtcSubscribers[c.Callee].Reject <- cancel
-			}
-			if c.Callee == user && WebrtcSubscribers[c.Caller] != nil && WebrtcSubscribers[c.Caller].Reject != nil {
-				WebrtcSubscribers[c.Caller].Reject <- cancel
+		cancel := Call{
+			ID:   call.ID,
+			Type: "cancel",
+		}
+		if call.Caller == user && WebrtcSubscribers[call.Callee] != nil && WebrtcSubscribers[call.Callee].Reject != nil {
+			WebrtcSubscribers[call.Callee].Reject <- cancel
+		}
+		if call.Callee == user && WebrtcSubscribers[call.Caller] != nil && WebrtcSubscribers[call.Caller].Reject != nil {
+			WebrtcSubscribers[call.Caller].Reject <- cancel
 
-			}
 		}
 	}
 
